@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Camera.h"
 #include "Shader.h"
 #include "stb_image.h"
 
@@ -13,8 +14,16 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 void processInput(GLFWwindow *window);
 
-bool wireframe = false;
-float images_ratio = 0.0;
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+
+void scroll_callback(GLFWwindow* window, double x_offset, double y_offset);
+
+float images_ratio = 0.5;
+float dt = 0.0f;
+float last_frame = 0.0f;
+float last_x = 400, last_y = 300;
+bool first_mouse = true;
+Camera camera(0, 0, 3, 0, 1, 0, -90, 0);
 
 int main(int argc, char** argv)
 {
@@ -41,6 +50,9 @@ int main(int argc, char** argv)
     glViewport(0, 0, 800, 600);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glEnable(GL_DEPTH_TEST);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback); 
 
     // Shader
     Shader shader("shaders/default.vs", "shaders/default.fs");
@@ -173,9 +185,8 @@ int main(int argc, char** argv)
 
     shader.use();
 
-    shader.set_int("texture1", 0);
-    shader.set_int("texture2", 1);
-
+    shader.set_int("texture1", texture1-1);
+    shader.set_int("texture2", texture2-1);
     
     // Main loop
     while(!glfwWindowShouldClose(window))
@@ -185,25 +196,15 @@ int main(int argc, char** argv)
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (wireframe)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        else
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
 
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        shader.set_mat4("view", view);
-
-        glm::mat4 projection;
-        projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-        shader.set_mat4("projection", projection);
-
         shader.set_float("image_ratio", images_ratio);
+        shader.set_mat4("view", camera.view_matrix());
+        shader.set_mat4("projection", camera.projection_matrix());
+
         glBindVertexArray(VAO);
         for(unsigned int i = 0; i < 10; i++)
         {
@@ -215,6 +216,10 @@ int main(int argc, char** argv)
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        float current_frame = glfwGetTime();
+        dt = current_frame - last_frame;
+        last_frame = current_frame;
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -238,11 +243,6 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        wireframe = true;
-    else
-        wireframe = false;
-    
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
         images_ratio += 0.05;
     
@@ -250,4 +250,35 @@ void processInput(GLFWwindow *window)
         images_ratio -= 0.05;
     
     images_ratio = images_ratio < 0 ? 0 : (images_ratio > 1 ? 1 : images_ratio);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.move(movement_direction::forward, dt);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.move(movement_direction::back, dt);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.move(movement_direction::left, dt);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.move(movement_direction::right, dt);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (first_mouse)
+    {
+        last_x = xpos;
+        last_y = ypos;
+        first_mouse = false;
+    }
+  
+    float x_offset = xpos - last_x;
+    float y_offset = last_y - ypos; 
+    last_x = xpos;
+    last_y = ypos;
+
+    camera.process_pan(x_offset, y_offset);
+}
+
+void scroll_callback(GLFWwindow* window, double x_offset, double y_offset)
+{
+    camera.process_zoom(y_offset);
 }

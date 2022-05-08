@@ -9,11 +9,13 @@ CLIOBJECT = $(CLIENT:%.cpp=build/%.o)
 
 TARGET = build/$(basename $(notdir $(CLIENT)))
 
-SRC = src/glad.c \
+SRC = src/Camera.cpp \
+	  src/glad.c \
 	  src/Shader.cpp \
 	  src/stb_image.cpp
 
-HEADERS = include/Shader.h \
+HEADERS = include/Camera.h \
+		  include/Shader.h \
 		  include/stb_image.h
 
 OBJECTS := $(SRC:%.cpp=build/%.o)
