@@ -18,7 +18,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 void scroll_callback(GLFWwindow* window, double x_offset, double y_offset);
 
-float images_ratio = 0.5;
 float dt = 0.0f;
 float last_frame = 0.0f;
 float last_x = 400, last_y = 300;
@@ -55,7 +54,8 @@ int main(int argc, char** argv)
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback); 
 
-    Shader shader("shaders/default.vs", "shaders/default.fs");
+    Shader lighting_shader("shaders/lighting.vs", "shaders/lighting.fs");
+    Shader light_source_shader("shaders/light_source.vs", "shaders/light_source.fs");
 
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -101,11 +101,13 @@ int main(int argc, char** argv)
         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
-    unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
+    unsigned int VBO, cube_vao, light_vao;
+
+    // Cube VAO
+    glGenVertexArrays(1, &cube_vao);
     glGenBuffers(1, &VBO);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(cube_vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -117,6 +119,16 @@ int main(int argc, char** argv)
     // texture coord attribute
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    // Light VAO
+    glGenVertexArrays(1, &light_vao);
+    glBindVertexArray(light_vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 
     unsigned int crate_texture, smile_texture;
 
@@ -160,10 +172,11 @@ int main(int argc, char** argv)
     }
     stbi_image_free(data);
 
-
-    shader.use();
-    shader.set_int("crate_texture", 0);
-    shader.set_int("smile_texture", 1);
+    lighting_shader.use();
+    lighting_shader.set_int("crate_texture", 0);
+    lighting_shader.set_int("smile_texture", 1);
+    lighting_shader.set_vec3("object_color", 1.0f, 0.5f, 0.31f);
+    lighting_shader.set_vec3("light_color", 1.0f, 1.0f, 1.0f);
     
     glm::vec3 cube_positions[] = {
         glm::vec3( 0.0f,  0.0f,  0.0f), 
@@ -178,35 +191,45 @@ int main(int argc, char** argv)
         glm::vec3(-1.3f,  1.0f, -1.5f)  
     };
 
+    glm::vec3 light_position(1.2f, 1.0f, 2.0f);
+
     // Main loop
     while(!glfwWindowShouldClose(window))
     {
         // Process input
         processInput(window);
-        shader.set_float("image_ratio", images_ratio);
 
-        // Activate textures
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, crate_texture);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, smile_texture);
+        lighting_shader.use();
 
         // Project scene
-        shader.set_mat4("view", camera.view_matrix());
-        shader.set_mat4("projection", camera.projection_matrix());
+        lighting_shader.set_mat4("view", camera.view_matrix());
+        lighting_shader.set_mat4("projection", camera.projection_matrix());
 
-        // Draw elements
-        glBindVertexArray(VAO);
+        // Draw cubes
+        glBindVertexArray(cube_vao);
         for(unsigned int i = 0; i < 10; i++)
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cube_positions[i]);
             float angle = 20.0f * i; 
             model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(0.5f, 1.0f, 0.0f));
-            shader.set_mat4("model", model);
+            lighting_shader.set_mat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        // Drawing the light
+        light_source_shader.use();
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, light_position);
+        model = glm::scale(model, glm::vec3(0.2));
+        light_source_shader.set_mat4("model", model);
+        light_source_shader.set_mat4("view", camera.view_matrix());
+        light_source_shader.set_mat4("projection", camera.projection_matrix());
+        
+        glBindVertexArray(light_vao);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Update elapsed time
         float current_frame = glfwGetTime();
@@ -220,7 +243,7 @@ int main(int argc, char** argv)
     }
 
     // Cleanup
-    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &cube_vao);
     glDeleteBuffers(1, &VBO);
 
     glfwTerminate();
@@ -236,14 +259,6 @@ void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        images_ratio += 0.05;
-    
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        images_ratio -= 0.05;
-    
-    images_ratio = images_ratio < 0 ? 0 : (images_ratio > 1 ? 1 : images_ratio);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.move(movement_direction::forward, dt);
