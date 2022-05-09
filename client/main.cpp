@@ -271,6 +271,10 @@ void processInput(GLFWwindow *window)
         camera.move(movement_direction::left, dt);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.move(movement_direction::right, dt);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        camera.move(movement_direction::down, dt);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        camera.move(movement_direction::up, dt);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)

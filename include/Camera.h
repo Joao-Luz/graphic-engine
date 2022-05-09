@@ -10,7 +10,9 @@ enum movement_direction {
     forward,
     back,
     left,
-    right
+    right,
+    up,
+    down
 };
 
 class Camera

@@ -43,6 +43,10 @@ void Camera::move(movement_direction direction, float dt)
         m_position -= m_right * velocity;
     if (direction == movement_direction::right)
         m_position += m_right * velocity;
+    if (direction == movement_direction::up)
+        m_position += m_world_up * velocity;
+    if (direction == movement_direction::down)
+        m_position -= m_world_up * velocity;
 }
 
 void Camera::process_pan(float xoffset, float yoffset, bool constrain_pitch)
