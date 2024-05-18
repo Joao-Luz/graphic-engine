@@ -5,10 +5,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <stb_image/stb_image.h>
 
 #include "Camera.h"
 #include "Shader.h"
-#include "stb_image.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
@@ -54,8 +54,8 @@ int main(int argc, char** argv)
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback); 
 
-    Shader lighting_shader("shaders/lighting.vs", "shaders/lighting.fs");
-    Shader light_source_shader("shaders/light_source.vs", "shaders/light_source.fs");
+    Shader lighting_shader("assets/shaders/lighting.vs", "assets/shaders/lighting.fs");
+    Shader light_source_shader("assets/shaders/light_source.vs", "assets/shaders/light_source.fs");
 
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int width, height, nrChannels;
-    std::string file_path = "assets/container.jpg";
+    std::string file_path = "assets/images/container.jpg";
     unsigned char *data = stbi_load(file_path.c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    file_path = "assets/awesomeface.png";
+    file_path = "assets/images/awesomeface.png";
     stbi_set_flip_vertically_on_load(true);
     data = stbi_load(file_path.c_str(), &width, &height, &nrChannels, 0);
     if (data)

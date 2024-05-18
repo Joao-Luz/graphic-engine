@@ -1,22 +1,23 @@
 LINK := -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl
 CFLAGS := -g -std=c++17
-INCLUDE_PATHS := -Iinclude -Ilib
+INCLUDE_PATHS := -Isrc -Iexternal
 CXX := g++
 
-CLIENT = client/main.cpp
+CLIENT = examples/cubes.cpp
 
 CLIOBJECT = $(CLIENT:%.cpp=build/%.o)
 
 TARGET = build/$(basename $(notdir $(CLIENT)))
 
 SRC = src/Camera.cpp \
-	  src/glad.c \
 	  src/Shader.cpp \
-	  src/stb_image.cpp
+	  external/stb_image/stb_image.cpp \
+	  external/glad/glad.c \
 
-HEADERS = include/Camera.h \
-		  include/Shader.h \
-		  include/stb_image.h
+HEADERS = src/Camera.h \
+		  src/Shader.h \
+		  external/stb_image/stb_image.h \
+		  external/glad/glad.h \
 
 OBJECTS := $(SRC:%.cpp=build/%.o)
 
@@ -26,12 +27,14 @@ build/src/%.o: src/%.cpp $(HEADERS)
 	@mkdir -p build/src/
 	$(CXX) $(INCLUDE_PATHS) $(CFLAGS) -c -o $@ $<
 
-build/lib/%.o: lib/%.cpp $(HEADERS)
-	@mkdir -p build/lib/
+build/external/%.o: external/%.cpp $(HEADERS)
+	@mkdir -p build/external/
+	@mkdir -p build/external/stb_image/
+	@mkdir -p build/external/glad/
 	$(CXX) $(INCLUDE_PATHS) $(CFLAGS) -c -o $@ $<
 
 $(CLIOBJECT): $(CLIENT) $(HEADERS)
-	@mkdir -p build/client/
+	@mkdir -p build/examples/
 	$(CXX) $(INCLUDE_PATHS) $(CFLAGS) -c -o $@ $<
 
 $(TARGET): $(OBJECTS) $(CLIOBJECT)
